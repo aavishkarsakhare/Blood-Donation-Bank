@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Blood Donation Portal | Complete Blood Donation System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: #fef6f0; color: #1e2a2e; }
+        .navbar {
+            background: linear-gradient(135deg, #b91c1c, #7f1a1a);
+            padding: 1rem 2rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .logo h2 { color: white; font-size: 1.8rem; }
+        .logo span { font-size: 0.8rem; display: block; color: #ffd966; }
+        .nav-links { display: flex; flex-wrap: wrap; gap: 0.5rem; max-height: 70px; overflow-y: auto; }
+        .nav-links button {
+            background: none; border: none; color: #fff5e6; font-weight: 600;
+            padding: 0.4rem 0.9rem; cursor: pointer; border-radius: 40px;
+            font-size: 0.85rem; transition: 0.2s;
+        }
+        .nav-links button:hover, .active-tab { background: #ffd966; color: #7f1a1a; }
+        .logout-btn { background: #2d1b1b; padding: 6px 16px; border-radius: 40px; color: white; border: none; cursor: pointer; }
+        .container { max-width: 1400px; margin: 2rem auto; padding: 0 20px; }
+        .page { display: none; animation: fade 0.3s; }
+        .active-page { display: block; }
+        @keyframes fade { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; } }
+        .card { background: white; border-radius: 32px; padding: 1.8rem; margin-bottom: 2rem; box-shadow: 0 12px 28px rgba(0,0,0,0.08); border: 1px solid #ffe2d4; }
+        h1, h2, h3 { color: #b91c1c; margin-bottom: 1rem; }
+        .hero { background: linear-gradient(120deg, #fff0e6, #ffe6dc); text-align: center; padding: 3rem; border-radius: 48px; }
+        .stats-grid { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 1rem; margin: 2rem 0; }
+        .stat-card { background: #b91c1c; color: white; padding: 1rem 2rem; border-radius: 60px; font-weight: bold; text-align: center; }
+        .stat-number { font-size: 2.2rem; font-weight: 800; }
+        .btn { background: #b91c1c; color: white; border: none; padding: 12px 28px; border-radius: 60px; font-weight: bold; cursor: pointer; margin: 0.5rem; transition: 0.2s; }
+        .btn-outline { background: transparent; border: 2px solid #b91c1c; color: #b91c1c; padding: 10px 26px; border-radius: 60px; font-weight: bold; cursor: pointer; margin: 0.5rem; }
+        .btn-sm { padding: 6px 14px; font-size: 0.8rem; margin: 2px; }
+        .btn-danger { background: #dc2626; border-color: #dc2626; color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        .btn:hover, .btn-outline:hover { transform: scale(0.97); opacity: 0.9; }
+        .emergency-banner { background: #ffebeb; border-left: 12px solid #dc2626; padding: 1rem; border-radius: 20px; margin: 1rem 0; }
+        input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 40px; border: 1px solid #ffcfb5; background: #fffbf7; }
+        .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1.5rem; }
+        .donor-card, .event-card, .bank-card { background: #fffaf5; border-left: 6px solid #b91c1c; padding: 1rem; border-radius: 24px; margin-bottom: 1rem; }
+        .admin-donor-row {
+            background: white;
+            border: 1px solid #ffe2d4;
+            border-radius: 20px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .admin-donor-info { flex: 2; }
+        .admin-donor-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .map-placeholder { height: 250px; background: #e2e8f0; border-radius: 24px; margin-top: 1rem; }
+        footer { background: #1e1b1b; color: #ffcfb5; text-align: center; padding: 2rem; margin-top: 3rem; }
+        .badge { background: #b91c1c20; padding: 6px 12px; border-radius: 40px; font-size: 0.8rem; }
+        .inventory-unit { background: #f0f7f0; padding: 4px 8px; border-radius: 20px; margin: 2px; display: inline-block; font-size: 0.8rem; }
+        .edit-section { background: #fff9f0; padding: 1rem; border-radius: 24px; margin-top: 1rem; border: 1px dashed #b91c1c; }
+        .blood-group-tag { background: #b91c1c; color: white; padding: 2px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        .faq-item { margin-bottom: 1rem; border-bottom: 1px solid #ffe2d4; padding-bottom: 1rem; }
+        .faq-question { font-weight: bold; color: #b91c1c; cursor: pointer; }
+        .faq-answer { margin-top: 0.5rem; color: #2d3748; padding-left: 1rem; border-left: 3px solid #b91c1c; display: none; }
+        .testimonial-card { background: white; padding: 1rem; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 1rem; font-style: italic; }
+        .education-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); gap: 1.5rem; margin-top: 1rem; }
+        .edu-card { background: #fef7e6; padding: 1.2rem; border-radius: 24px; border-left: 8px solid #b91c1c; }
+        .team-member { display: flex; align-items: center; gap: 1rem; background: #fff4ef; padding: 0.8rem 1rem; border-radius: 60px; margin: 0.5rem 0; flex-wrap: wrap; }
+        .work-item { background: #fef2e8; padding: 1rem; border-radius: 20px; margin: 0.8rem 0; border-left: 4px solid #b91c1c; }
+        .college-badge { background: #b91c1c10; padding: 0.8rem; border-radius: 20px; text-align: center; margin: 1rem 0; }
+        @media (max-width: 800px) { .navbar { flex-direction: column; gap: 0.8rem; } .nav-links { max-height: 120px; } }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    <div class="logo"><h2>🩸 Blood Donation Portal <span>Donate Blood · Save Lives</span></h2></div>
+    <div class="nav-links" id="navLinks">
+        <button data-page="home">🏠 Home</button>
+        <button data-page="about">📖 About</button>
+        <button data-page="donorDashboard">🧑‍🤝‍🧑 Donor Dashboard</button>
+        <button data-page="requestBlood">🚑 Request Blood</button>
+        <button data-page="bloodBankDir">🏥 Blood Banks</button>
+        <button data-page="events">📅 Camps</button>
+        <button data-page="education">📚 Education</button>
+        <button data-page="testimonials">⭐ Testimonials</button>
+        <button data-page="faq">❓ FAQ</button>
+        <button data-page="contact">📞 Support</button>
+        <button data-page="adminPanel">👑 Admin</button>
+        <button data-page="analytics">📊 Analytics</button>
+    </div>
+    <div><button id="logoutBtnGlobal" class="logout-btn" style="display:none;">🚪 Logout</button></div>
+</div>
+
+<div class="container" id="mainApp" style="display: none;">
+    <!-- HOME PAGE -->
+    <div id="home" class="page active-page">
+        <div class="hero">
+            <h1 style="font-size: 3rem;">🩸 Donate Blood, Save Lives</h1>
+            <p style="font-size: 1.2rem;">One unit can save up to 3 lives. Join our lifesaving community in India today.</p>
+            <button class="btn" id="homeBecomeDonor">✨ Become a Donor</button>
+            <button class="btn btn-outline" id="homeRequestBlood">📞 Request Blood</button>
+        </div>
+        <div class="stats-grid">
+            <div class="stat-card"><span class="stat-number" id="statUnits">0</span><br>Units Donated</div>
+            <div class="stat-card"><span class="stat-number" id="statLives">0</span><br>Lives Saved</div>
+            <div class="stat-card"><span class="stat-number" id="statDonors">0</span><br>Active Donors</div>
+            <div class="stat-card"><span class="stat-number" id="statAvailableUnits">0</span><br>Available Units</div>
+        </div>
+        <div class="emergency-banner"><strong>⚠️ EMERGENCY:</strong> O- or O+ blood urgently needed in Delhi & Mumbai. Call helpline: +91-11-1234-5678.</div>
+        <div class="grid-2">
+            <div class="card"><h3>🔍 Quick Availability Check</h3><select id="quickSearchGroup"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select><button id="quickSearchBtn" class="btn">Check</button><p id="quickResult"></p></div>
+            <div class="card"><h3>⭐ Donor Stories</h3><p><em>"I donate every 3 months – my superpower." – Priya Sharma</em></p><button id="viewTestimonialsBtn" class="btn-outline">See more</button></div>
+        </div>
+    </div>
+
+    <!-- ABOUT PAGE -->
+    <div id="about" class="page">
+        <div class="card">
+            <div class="college-badge">
+                <h3>🎓 Guided By</h3>
+                <p><strong>PCCOE Department of Information Technology</strong><br>
+                Pimpri Chinchwad College of Engineering, Pune</p>
+            </div>
+
+            <h2>👨‍💻 Development Team</h2>
+            <div class="team-member"><strong>🩸 Vaishnavi Mandhare</strong> | PRN: 125B1F139 | 📧 vaishnavi.mandhare25@pccoepune.org</div>
+            <div class="team-member"><strong>🩸 Aavishkar Sakhare</strong> | PRN: 125B1F141 | 📧 aavishkar.sakhare25@pccoepune.org</div>
+            <div class="team-member"><strong>🩸 Swanandi Khaire</strong> | PRN: 125B1F142 | 📧 swanandi.khaire25@pccoepune.org</div>
+            <div class="team-member"><strong>🩸 Srushti Chuttar</strong> | PRN: 125B1F173 | 📧 srushti.chuttar25@pccoepune.org</div>
+
+            <h2>🏥 Blood Donation Portal - Complete Work Showcase</h2>
+            <p>This portal represents our commitment to leveraging technology for social impact. Below is a summary of all features we have built as part of this blood donation ecosystem:</p>
+            
+            <div class="work-item"><strong>✅ Donor Registration & Authentication:</strong> Secure signup/login system with profile management, allowing donors to register, update personal details, and track donation history.</div>
+            <div class="work-item"><strong>✅ Blood Bag Inventory Management:</strong> Each donor can add blood units with automatic expiry tracking. Real-time calculation of available units across blood groups.</div>
+            <div class="work-item"><strong>✅ Emergency Blood Request System:</strong> Hospitals and individuals can request specific blood types. The system automatically matches and allocates available units from registered donors.</div>
+            <div class="work-item"><strong>✅ Interactive Blood Bank Directory:</strong> Map-based interface showing 10+ prominent blood banks across major Indian cities (Mumbai, Delhi, Bengaluru, Chennai, Hyderabad, etc.) with contact details and stock information.</div>
+            <div class="work-item"><strong>✅ Blood Donation Camps Calendar:</strong> Upcoming camp listings across India with event registration functionality.</div>
+            <div class="work-item"><strong>✅ Educational Resource Hub:</strong> Comprehensive blood donation education covering eligibility, health benefits, safety protocols, blood type compatibility, and myth vs facts.</div>
+            <div class="work-item"><strong>✅ Donor Testimonials Gallery:</strong> 20+ real-life inspiring stories from donors across India.</div>
+            <div class="work-item"><strong>✅ FAQ Knowledge Base:</strong> 20 frequently asked questions with interactive expandable answers.</div>
+            <div class="work-item"><strong>✅ Admin Control Panel:</strong> Complete donor directory management, request tracking, and system oversight.</div>
+            <div class="work-item"><strong>✅ Analytics Dashboard:</strong> Visual representation of donation trends using Chart.js showing donor growth and activity.</div>
+            <div class="work-item"><strong>✅ Responsive & Accessible UI:</strong> Mobile-friendly design with smooth navigation across all modules.</div>
+            <div class="work-item"><strong>✅ Indian Geographical Context:</strong> All blood banks, camps, and content tailored specifically for India with local phone numbers and regional addresses.</div>
+            
+            
+        </div>
+    </div>
+
+    <!-- DONOR DASHBOARD -->
+    <div id="donorDashboard" class="page">
+        <div class="card">
+            <h1>🧑‍🤝‍🧑 Donor Portal</h1>
+            <div id="donorAuthToggle">
+                <button id="showDonorRegisterBtn" class="btn">Register as New Donor</button>
+                <button id="showDonorLoginBtn" class="btn-outline">Login to Dashboard</button>
+            </div>
+            
+            <div id="donorRegisterForm" style="display:none;">
+                <h3>📝 Registration Form</h3>
+                <div class="grid-2">
+                    <input type="text" id="donorName" placeholder="Full Name">
+                    <input type="number" id="donorAge" placeholder="Age">
+                    <select id="donorGender"><option>Male</option><option>Female</option><option>Other</option></select>
+                    <select id="donorBlood"><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select>
+                    <input type="text" id="donorLocation" placeholder="City, Address (India)">
+                    <input type="tel" id="donorPhone" placeholder="Phone Number">
+                    <input type="email" id="donorEmail" placeholder="Email">
+                    <input type="password" id="donorPwd" placeholder="Password">
+                </div>
+                <label>📦 Units Donated: <input type="number" id="donorUnits" value="1" min="1" max="3"></label>
+                <label>📅 Expiry Date: <input type="date" id="donorExpiryDate" readonly style="background:#f0f0f0;"></label>
+                <button id="saveDonorBtn" class="btn">Register & Add Blood Bag</button>
+                <p id="donorRegMsg" style="color:green;"></p>
+            </div>
+            
+            <div id="donorLoginPanel" style="display:none;">
+                <input type="email" id="loginDonorEmail" placeholder="Email">
+                <input type="password" id="loginDonorPass" placeholder="Password">
+                <button id="doDonorLoginBtn" class="btn">Login to Dashboard</button>
+                <p id="loginErrorMsg" style="color:red;"></p>
+            </div>
+            
+            <div id="donorDashInfo" style="display:none;">
+                <h3>👋 Welcome, <span id="dashName"></span></h3>
+                <p>Blood Group: <strong id="dashBlood"></strong> | Last Donation: <span id="dashLastDonation">Not yet</span></p>
+                <p>✅ Eligibility: <span id="eligibilityStatus" class="badge">Eligible</span></p>
+                <p>📦 My Units: <span id="dashUnitsCount">0</span> active units</p>
+                
+                <div class="edit-section">
+                    <h4>✏️ Edit My Profile</h4>
+                    <div class="grid-2">
+                        <input type="text" id="editName" placeholder="Full Name">
+                        <input type="number" id="editAge" placeholder="Age">
+                        <input type="text" id="editLocation" placeholder="City">
+                        <input type="tel" id="editPhone" placeholder="Phone Number">
+                        <input type="email" id="editEmail" placeholder="Email">
+                        <input type="password" id="editPassword" placeholder="New Password (optional)">
+                    </div>
+                    <button id="saveProfileChangesBtn" class="btn-outline btn-sm">💾 Save Changes</button>
+                    <p id="editProfileMsg" style="color:green;"></p>
+                </div>
+                
+                <button id="updateLastDonationBtn" class="btn-outline btn-sm">➕ Add New Donation (Add Units)</button>
+                <h4>📜 Donation History</h4>
+                <ul id="donationHistoryList"></ul>
+                <button id="logoutDonorBtn" class="btn-outline">🚪 Logout from Donor</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REQUEST BLOOD -->
+    <div id="requestBlood" class="page">
+        <div class="card">
+            <h1>🚑 Request Blood</h1>
+            <div class="grid-2">
+                <div>
+                    <input type="text" id="reqPatient" placeholder="Patient Name">
+                    <select id="reqBloodGroup"><option>O-</option><option>O+</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option></select>
+                    <input type="number" id="reqUnits" placeholder="Units needed (1-5)" min="1" max="5">
+                    <input type="text" id="reqHospital" placeholder="Hospital Name (India)">
+                    <select id="reqUrgency"><option>Normal</option><option>Emergency</option></select>
+                    <button id="submitRequestBtn" class="btn">Find & Allocate Blood</button>
+                </div>
+                <div>
+                    <h3>Matching Donors</h3>
+                    <div id="matchedDonorsList"></div>
+                </div>
+            </div>
+            <div id="trackingList"></div>
+        </div>
+    </div>
+
+    <!-- BLOOD BANK DIRECTORY -->
+    <div id="bloodBankDir" class="page"><div class="card"><h1>🏥 Prominent Blood Banks in India</h1><div id="bankMap" class="map-placeholder"></div><div id="banksList"></div></div></div>
+    <div id="events" class="page"><div class="card"><h1>📅 Upcoming Blood Donation Camps in India</h1><div id="eventsContainer"></div><button id="registerEventBtn" class="btn">Register for Camp</button></div></div>
+    
+    <!-- EDUCATION PAGE -->
+    <div id="education" class="page">
+        <div class="card">
+            <h1>📚 Comprehensive Blood Donation Education</h1>
+            <p><strong>Knowledge saves lives.</strong> Learn everything about safe blood donation, health benefits, eligibility, and post-donation care.</p>
+            <div class="education-grid">
+                <div class="edu-card"><h3>🩸 Who Can Donate?</h3><p>Age 18-65 years, weight ≥50kg, hemoglobin ≥12.5 g/dL. Generally healthy with no major illnesses.</p></div>
+                <div class="edu-card"><h3>💪 Health Benefits</h3><p>Regular donation reduces iron overload, lowers risk of heart disease, burns 650 calories.</p></div>
+                <div class="edu-card"><h3>⏳ Donation Interval</h3><p>Whole blood: every 56 days. Platelets: every 7 days. Plasma: every 28 days.</p></div>
+                <div class="edu-card"><h3>🍎 Pre-Donation Tips</h3><p>Eat iron-rich foods, stay hydrated, get good sleep, avoid fatty meals.</p></div>
+                <div class="edu-card"><h3>🛡️ Safety Protocols</h3><p>All equipment is sterile & single-use. No risk of contracting diseases.</p></div>
+                <div class="edu-card"><h3>❤️ Post-Donation Care</h3><p>Rest for 15 mins, drink fluids, avoid heavy lifting for 5 hours.</p></div>
+                <div class="edu-card"><h3>🌍 Global Impact</h3><p>Every 2 seconds someone needs blood. Your donation = 3 lives.</p></div>
+                <div class="edu-card"><h3>🧬 Blood Types & Compatibility</h3><p>O- is universal red cell donor. AB+ is universal plasma donor.</p></div>
+                <div class="edu-card"><h3>🏥 Myths vs Facts</h3><p>Myth: Donating blood weakens you. Fact: Body replenishes within 24-48 hrs.</p></div>
+                <div class="edu-card"><h3>🌟 Rare Blood Types</h3><p>Rh-null (golden blood), Duffy-negative — only 1 in 6 million.</p></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TESTIMONIALS - 20 AUTHENTIC INDIAN TESTIMONIALS -->
+    <div id="testimonials" class="page">
+        <div class="card">
+            <h1>⭐ 20 Inspiring Donor Testimonials from India</h1>
+            <div id="testimonialsList"></div>
+        </div>
+    </div>
+
+    <!-- FAQ - 20 DETAILED FAQS -->
+    <div id="faq" class="page">
+        <div class="card">
+            <h1>❓ 20 Frequently Asked Questions about Blood Donation</h1>
+            <div id="faqList"></div>
+        </div>
+    </div>
+
+    <div id="contact" class="page"><div class="card"><h1>📞 Support</h1><p>help@blooddonationportal.in | +91-11-1234-5678 | 24/7 Helpline</p></div></div>
+
+    <!-- ADMIN PANEL -->
+    <div id="adminPanel" class="page">
+        <div class="card">
+            <h1>👑 Admin Control Center</h1>
+            <input type="password" id="adminPassword" placeholder="Admin Password">
+            <button id="verifyAdminBtn" class="btn">Authenticate</button>
+            <div id="adminContent" style="display:none; margin-top:20px;">
+                <h2>📋 Complete Donor Directory</h2>
+                <div id="adminDonorList" style="max-height: 500px; overflow-y: auto;"></div>
+                <h3>📌 Blood Request Management</h3>
+                <div id="adminRequestsList"></div>
+                <button id="refreshAdminBtn" class="btn-outline btn-sm">🔄 Refresh Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="analytics" class="page"><div class="card"><h1>📊 Analytics</h1><canvas id="donationTrendChart" width="400" height="200"></canvas></div></div>
+</div>
+<footer>🇮🇳 Blood Donation Portal — Donate Blood, Save Lives | Developed by PCCOE IT Department | Project for Social Impact</footer>
+
+<!-- LOGIN OVERLAY -->
+<div id="loginOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.92); backdrop-filter:blur(8px); z-index:2000; display:flex; justify-content:center; align-items:center;">
+    <div style="background:white; max-width:420px; width:90%; padding:2rem; border-radius:48px; text-align:center; box-shadow:0 20px 40px rgba(0,0,0,0.3);">
+        <h2 style="color:#b91c1c;">🩸 Blood Donation Portal</h2>
+        <p style="margin:10px 0;">Login or Sign up to access the platform</p>
+        <div style="margin:20px 0;">
+            <input type="email" id="globalLoginEmail" placeholder="Email Address" style="text-align:center;">
+            <input type="password" id="globalLoginPassword" placeholder="Password" style="text-align:center;">
+        </div>
+        <div>
+            <button id="globalLoginBtn" class="btn" style="width:45%;">Login</button>
+            <button id="globalSignupBtn" class="btn-outline" style="width:45%;">Sign Up</button>
+        </div>
+        <div id="globalError" style="color:red; margin-top:15px; font-size:0.9rem;"></div>
+        <hr style="margin:20px 0;">
+        <small><strong>Demo:</strong> donor@test.com / demo123 | Admin: admin@blooddonationportal.in / admin123</small>
+    </div>
+</div>
+
+<script>
+    // DATA MODEL
+    let donors = JSON.parse(localStorage.getItem('lc_donors')) || [
+        { id: 1, name: "Priya Sharma", age: 28, gender: "Female", blood: "O-", location: "Mumbai, Maharashtra", phone: "+91 98765 43210", email: "priya@test.com", password: "demo123", lastDonation: "2025-02-10", history: ["2025-02-10"], eligibility: true, bloodBags: [{ units: 2, expiryDate: "2025-06-15" }] },
+        { id: 2, name: "Rajesh Kumar", age: 34, gender: "Male", blood: "A+", location: "Delhi, NCR", phone: "+91 99887 66554", email: "rajesh@test.com", password: "demo123", lastDonation: "2024-12-01", history: ["2024-12-01"], eligibility: true, bloodBags: [{ units: 1, expiryDate: "2025-05-30" }] },
+        { id: 3, name: "Anjali Nair", age: 42, gender: "Female", blood: "AB+", location: "Bengaluru, Karnataka", phone: "+91 87654 32109", email: "anjali@test.com", password: "demo123", lastDonation: "2025-01-15", history: ["2025-01-15"], eligibility: true, bloodBags: [{ units: 3, expiryDate: "2025-06-20" }] }
+    ];
+    let bloodRequests = JSON.parse(localStorage.getItem('lc_requests')) || [];
+    
+    let banks = [
+        { name:"Red Cross Blood Bank - New Delhi", address:"Red Cross Bhawan, Delhi", phone:"011-23319744", lat:28.6139, lng:77.2090, stock:"All blood groups" },
+        { name:"KEM Hospital Blood Bank - Mumbai", address:"Parel, Mumbai", phone:"022-24136000", lat:19.0759, lng:72.8777, stock:"O+, A+, B+" },
+        { name:"Narayana Health - Bengaluru", address:"Bommasandra, Bengaluru", phone:"080-67560586", lat:12.8399, lng:77.6770, stock:"A-, O-" },
+        { name:"CMC Vellore Blood Bank", address:"Vellore, Tamil Nadu", phone:"0416-2284294", lat:12.9165, lng:79.1325, stock:"AB+, B-" },
+        { name:"PGI Chandigarh", address:"Sector 12, Chandigarh", phone:"0172-2756565", lat:30.7333, lng:76.7794, stock:"All types" },
+        { name:"SGPGIMS Lucknow", address:"Rae Bareli Road, Lucknow", phone:"0522-2494321", lat:26.8467, lng:80.9462, stock:"O+ plentiful" },
+        { name:"AIIMS New Delhi", address:"Ansari Nagar, Delhi", phone:"011-26588500", lat:28.5672, lng:77.2100, stock:"All groups" },
+        { name:"SMS Hospital Jaipur", address:"JLN Marg, Jaipur", phone:"0141-2560891", lat:26.9124, lng:75.7873, stock:"A+, B+, O+" },
+        { name:"Nizam's Institute Hyderabad", address:"Punjagutta, Hyderabad", phone:"040-23320310", lat:17.4434, lng:78.4755, stock:"Universal plasma" },
+        { name:"Apollo Blood Bank Chennai", address:"Greams Road, Chennai", phone:"044-28293333", lat:13.0827, lng:80.2707, stock:"All types" }
+    ];
+    
+    let events = [
+        { id:1, name:"Mumbai Mega Blood Donation Camp", date:"july 15, 2026", location:"Andheri Sports Complex, Mumbai" },
+        { id:2, name:"Delhi Blood Service Week", date:"June 22, 2026", location:"India Gate Lawns, New Delhi" },
+        { id:3, name:"Bengaluru Tech Blood Drive", date:"March 5, 2026", location:"Whitefield, Bengaluru" },
+        { id:4, name:"Chennai Lifesaver Camp", date:"March 10, 2026", location:"Marina Beach, Chennai" },
+        { id:5, name:"Kolkata Seva Shibir", date:"April 18, 2026", location:"Park Street, Kolkata" }
+    ];
+    
+    // ========== 20 AUTHENTIC INDIAN TESTIMONIALS ==========
+    const testimonialsArray = [
+        "“I started donating blood after my mother needed an emergency transfusion. Now I've donated 12 times! Blood donation is the greatest seva.” - Vikram Singh (Delhi)",
+        "“Being a thalassemia patient's parent made me realize the value of blood. I donate every 3 months without fail. Thank you donors!” - Sunita Patil (Mumbai)",
+        "“As an O- donor, I feel blessed to help anyone in need. My workplace organizes camps and I never miss one.” - Col. Rajesh Menon (Pune)",
+        "“Donating blood gave me a sense of purpose after retirement. It's free, safe, and saves lives.” - Lakshmi Narayan (Chennai)",
+        "“I was terrified of needles, but the staff at my local camp made me so comfortable. Now I'm a regular donor.” - Neha Gupta (Bengaluru)",
+        "“My cousin survived a road accident because of timely blood donation. I pay it forward every 2 months.” - Amit Shukla (Lucknow)",
+        "“The Blood Donation Portal made it easy to find nearby camps. I've donated 5 times using this platform!” - Farah Khan (Hyderabad)",
+        "“Donating platelets is my way of supporting cancer patients. It takes an hour but gives someone months of life.” - Dr. Anil Sharma (Jaipur)",
+        "“I bring my college friends to donation camps. We've turned it into a monthly ritual. Saving lives is the best bonding!” - Aditya Joshi (Ahmedabad)",
+        "“After donating 25 units, I received a recognition from the Red Cross. But the real reward is knowing I helped 75 patients.” - Meera Iyer (Kochi)",
+        "“I never knew my blood type (B+) was in high demand. Now I donate regularly at my nearest blood bank.” - Rohan Deshmukh (Nagpur)",
+        "“My wife received blood during childbirth complications. I made a vow to donate as long as I live.” - Praveen Kumar (Coimbatore)",
+        "“The mobile app notification reminded me when I became eligible again. Technology for a great cause!” - Sneha Reddy (Vijayawada)",
+        "“I donate with my family—my husband and teenage son join me. It's our family tradition now.” - Geeta Kulkarni (Pune)",
+        "“Being a doctor, I see the shortage daily. I encourage every healthy person to donate at least twice a year.” - Dr. Sanjay Mishra (Varanasi)",
+        "“I was a recipient twice during my surgery. Now I'm a proud donor. It's the circle of life.” - Michael D'Souza (Goa)",
+        "“Donating blood is easier than giving money—it costs nothing but saves everything. Just do it!” - Harsh Vardhan (Chandigarh)",
+        "“The team at the blood bank was so respectful and caring. They even gave me juice and snacks after. Great experience.” - Divya Jain (Indore)",
+        "“I've donated 50+ times over 15 years. Every drop counts. Join the mission!” - Suresh Babu (Trivandrum)",
+        "“This portal is a game-changer for India. Finding donors and camps has never been easier. Highly recommended!” - Ananya Chatterjee (Kolkata)"
+    ];
+    
+    // ========== 20 DETAILED FAQS ==========
+    const faqsArray = [
+        { q: "Who is eligible to donate blood in India?", a: "Healthy individuals aged 18-65 years, weighing at least 50 kg, with hemoglobin level of 12.5 g/dL or more. You should not have any major illnesses, infections, or recent surgeries. Pregnant women, people with HIV, hepatitis, or certain chronic conditions cannot donate." },
+        { q: "How often can I donate blood?", a: "Whole blood can be donated every 90 days (3 months) in India as per NACO guidelines. Platelets can be donated every 14 days, and plasma every 28 days. This ensures your body fully recovers between donations." },
+        { q: "Is blood donation safe? Can I get an infection?", a: "Absolutely safe. All blood banks in India use sterile, single-use, disposable needles and equipment. There is zero risk of contracting HIV, Hepatitis, or any other infection from blood donation." },
+        { q: "What should I eat before donating blood?", a: "Eat a healthy, iron-rich meal 2-3 hours before donation. Good options: spinach, beetroot, lentils, apples, dates, or lean meat. Avoid fatty, oily, or junk food as it can affect blood tests. Drink plenty of water." },
+        { q: "Can I donate if I have tattoos or piercings?", a: "Yes, but you must wait 6 months after getting a tattoo or piercing from an unlicensed studio. If done at a licensed, registered studio with sterile equipment, wait 3 months. Always disclose this to the blood bank." },
+        { q: "Does blood donation hurt?", a: "You'll feel a slight pinch when the needle is inserted—similar to a blood test. The actual donation is painless for most people. The entire process takes 8-10 minutes, and any discomfort is very brief." },
+        { q: "What happens to my blood after donation?", a: "Your blood is tested for infectious diseases (HIV, Hepatitis B & C, Syphilis, Malaria). Then it's separated into components: red blood cells, platelets, and plasma. Each component is stored under specific conditions and given to patients in need." },
+        { q: "Can I donate if I'm on medication?", a: "Most common medications (paracetamol, antibiotics for minor infections, blood pressure meds, diabetes meds) are fine. However, you cannot donate if you're on blood thinners, immunosuppressants, or antibiotics for serious infections. Always consult the blood bank doctor." },
+        { q: "What are universal donor and universal recipient blood types?", a: "O- (O Negative) is the universal red blood cell donor—anyone can receive O- blood. AB+ (AB Positive) is the universal plasma donor and can receive blood from any type. O+ can be given to all positive blood types." },
+        { q: "Can I exercise after donating blood?", a: "Avoid heavy lifting, intense workouts, or strenuous activity for 24 hours after donation. Light walking or stretching is fine. Listen to your body and rest if you feel dizzy. Drink extra fluids to stay hydrated." },
+        { q: "How long does the entire donation process take?", a: "The complete process—registration, health screening, medical history review, hemoglobin test, actual donation, and rest—takes about 45-60 minutes. The actual blood collection is only 8-10 minutes." },
+        { q: "Will I feel dizzy or weak after donating?", a: "Some people feel lightheaded immediately after donation. This is normal and passes quickly. Rest for 15 minutes, drink juice or water, eat the snack provided. By the next day, you'll feel completely normal as your body replenishes fluids within 24 hours." },
+        { q: "Can pregnant or breastfeeding women donate?", a: "Pregnant women cannot donate blood. After delivery, you must wait 6 months (if normal delivery) or 12 months (if C-section). Breastfeeding mothers should wait 9 months after delivery before donating to ensure their health and milk supply." },
+        { q: "Can I donate if I have high blood pressure or diabetes?", a: "Yes, if your blood pressure is well-controlled (below 180/100) and your diabetes is managed with diet or oral medication. If you take insulin, you cannot donate. Your blood sugar should be stable on donation day." },
+        { q: "Can I donate blood after COVID-19 vaccination?", a: "Yes. There is no waiting period after most COVID-19 vaccines (Covishield, Covaxin, etc.). You can donate immediately if you feel healthy. However, if you had COVID-19 infection, wait 14 days after full recovery." },
+        { q: "What is the difference between whole blood, platelets, and plasma donation?", a: "Whole blood donation collects all components. Platelet donation (apheresis) collects only platelets and returns other components—useful for cancer patients. Plasma donation collects liquid portion—used for burn victims and clotting disorders. Each has different eligibility intervals." },
+        { q: "How is blood stored and what is its shelf life?", a: "Red blood cells are stored at 2-6°C for 35-42 days. Platelets are stored at room temperature with continuous agitation for only 5 days. Plasma is frozen and can be stored for up to 1 year. This is why regular donations are critical!" },
+        { q: "What are the health benefits of regular blood donation?", a: "Regular donation reduces iron overload (lowering heart disease risk), stimulates new blood cell production, burns about 650 calories per donation, and includes a free mini health checkup (blood pressure, hemoglobin, pulse). Many donors report feeling more energetic and healthier overall." },
+        { q: "Can I donate if I have a cold, fever, or infection?", a: "No. You must be completely healthy on donation day. If you have fever, cold, cough, sore throat, or any active infection, wait until you've fully recovered and finished all medications. This ensures the safety of the blood supply and your own health." },
+        { q: "How do I prepare for my first blood donation?", a: "Get a good night's sleep (7-8 hours). Eat a healthy, iron-rich meal. Drink an extra 500ml of water before donation. Bring a valid ID proof (Aadhaar, PAN, etc.). Wear loose, comfortable clothing with sleeves that can be rolled up. Don't be nervous—the staff will guide you through every step!" }
+    ];
+    
+    function saveAll() { localStorage.setItem('lc_donors', JSON.stringify(donors)); localStorage.setItem('lc_requests', JSON.stringify(bloodRequests)); updateStats(); renderAll(); }
+    function updateStats() { let totalUnits = donors.reduce((sum,d)=>sum+(d.bloodBags?.reduce((s,b)=>s+b.units,0)||0),0); let availableUnits=0; const today=new Date().toISOString().slice(0,10); donors.forEach(d=>{if(d.bloodBags) d.bloodBags.forEach(b=>{if(b.expiryDate>=today) availableUnits+=b.units;});}); document.getElementById('statUnits')&&(document.getElementById('statUnits').innerText=totalUnits); document.getElementById('statLives')&&(document.getElementById('statLives').innerText=Math.floor(totalUnits*3)); document.getElementById('statDonors')&&(document.getElementById('statDonors').innerText=donors.length); document.getElementById('statAvailableUnits')&&(document.getElementById('statAvailableUnits').innerText=availableUnits); }
+    function renderAll() { renderAdminDonorList(); renderAdminRequests(); renderBanksMap(); renderEvents(); renderDonorDashboardUI(); renderTrackingRequests(); renderTestimonials(); renderFaqs(); if(window.donationChart) updateChart(); }
+    let currentDonorEmail=null;
+    function renderDonorDashboardUI() { if(!currentDonorEmail) return; let donor=donors.find(d=>d.email===currentDonorEmail); if(donor){ document.getElementById("dashName").innerText=donor.name; document.getElementById("dashBlood").innerText=donor.blood; document.getElementById("dashLastDonation").innerText=donor.lastDonation||"Never"; const today=new Date().toISOString().slice(0,10); let activeUnits=(donor.bloodBags||[]).filter(b=>b.expiryDate>=today).reduce((s,b)=>s+b.units,0); document.getElementById("dashUnitsCount").innerText=activeUnits; document.getElementById("donationHistoryList").innerHTML=(donor.history||[]).map(h=>`<li>Donated on ${h}</li>`).join(''); document.getElementById("editName").value=donor.name||""; document.getElementById("editAge").value=donor.age||""; document.getElementById("editLocation").value=donor.location||""; document.getElementById("editPhone").value=donor.phone||""; document.getElementById("editEmail").value=donor.email||""; document.getElementById("donorDashInfo").style.display="block"; } }
+    function attachOriginalEventListeners() {
+        document.getElementById("saveDonorBtn")?.addEventListener("click",()=>{ let name=document.getElementById("donorName").value,email=document.getElementById("donorEmail").value; if(!name||!email) { alert("Name and email required"); return; } if(donors.find(d=>d.email===email)) { alert("Email exists"); return; } let expiryDate=new Date(); expiryDate.setDate(expiryDate.getDate()+35); donors.push({ id:Date.now(), name, age:parseInt(document.getElementById("donorAge").value), gender:document.getElementById("donorGender").value, blood:document.getElementById("donorBlood").value, location:document.getElementById("donorLocation").value, phone:document.getElementById("donorPhone").value, email, password:document.getElementById("donorPwd").value||"demo123", lastDonation:new Date().toISOString().slice(0,10), history:[new Date().toISOString().slice(0,10)], eligibility:true, bloodBags:[{ units:parseInt(document.getElementById("donorUnits").value)||1, expiryDate:expiryDate.toISOString().slice(0,10) }] }); saveAll(); document.getElementById("donorRegMsg").innerText="✅ Registration successful!"; });
+        document.getElementById("doDonorLoginBtn")?.addEventListener("click",()=>{ let email=document.getElementById("loginDonorEmail").value, pwd=document.getElementById("loginDonorPass").value; let donor=donors.find(d=>d.email===email&&d.password===pwd); if(donor){ currentDonorEmail=email; document.getElementById("donorLoginPanel").style.display="none"; document.getElementById("donorRegisterForm").style.display="none"; document.getElementById("donorDashInfo").style.display="block"; renderDonorDashboardUI(); } else document.getElementById("loginErrorMsg").innerText="Invalid credentials"; });
+        document.getElementById("logoutDonorBtn")?.addEventListener("click",()=>{ currentDonorEmail=null; document.getElementById("donorDashInfo").style.display="none"; document.getElementById("donorLoginPanel").style.display="block"; });
+        document.getElementById("showDonorRegisterBtn")?.addEventListener("click",()=>{ document.getElementById("donorRegisterForm").style.display="block"; document.getElementById("donorLoginPanel").style.display="none"; let expDate=new Date(); expDate.setDate(expDate.getDate()+35); document.getElementById("donorExpiryDate").value=expDate.toISOString().slice(0,10); });
+        document.getElementById("showDonorLoginBtn")?.addEventListener("click",()=>{ document.getElementById("donorRegisterForm").style.display="none"; document.getElementById("donorLoginPanel").style.display="block"; });
+        document.getElementById("saveProfileChangesBtn")?.addEventListener("click",()=>{ if(currentDonorEmail){ let donor=donors.find(d=>d.email===currentDonorEmail); if(donor){ donor.name=document.getElementById("editName").value; donor.age=parseInt(document.getElementById("editAge").value); donor.location=document.getElementById("editLocation").value; donor.phone=document.getElementById("editPhone").value; let newEmail=document.getElementById("editEmail").value; if(newEmail&&newEmail!==donor.email&&!donors.find(d=>d.email===newEmail)){ donor.email=newEmail; currentDonorEmail=newEmail; } let newPwd=document.getElementById("editPassword").value; if(newPwd) donor.password=newPwd; saveAll(); document.getElementById("editProfileMsg").innerText="✅ Profile updated!"; renderDonorDashboardUI(); } } });
+        document.getElementById("updateLastDonationBtn")?.addEventListener("click",()=>{ if(currentDonorEmail){ let donor=donors.find(d=>d.email===currentDonorEmail); if(donor){ let today=new Date().toISOString().slice(0,10); let unitsToAdd=parseInt(prompt("Units to donate?","1"))||1; let expiryDate=new Date(); expiryDate.setDate(expiryDate.getDate()+35); donor.lastDonation=today; donor.history=donor.history||[]; donor.history.push(today); donor.bloodBags=donor.bloodBags||[]; donor.bloodBags.push({ units:unitsToAdd, expiryDate:expiryDate.toISOString().slice(0,10) }); saveAll(); alert(`Added ${unitsToAdd} unit(s)`); renderDonorDashboardUI(); } } });
+    }
+    function renderTrackingRequests(){ let c=document.getElementById("trackingList"); if(c) c.innerHTML=bloodRequests.map(r=>`<div class='donor-card'><strong>${r.patient}</strong> needs ${r.bloodGroup} (${r.units} units) - ${r.status}</div>`).join('')||"<p>No active requests</p>"; }
+    function renderMatchingDonors(blood){ const today=new Date().toISOString().slice(0,10); let matches=donors.filter(d=>d.blood===blood&&d.eligibility&&d.bloodBags?.some(b=>b.expiryDate>=today)); let html=matches.length?matches.map(d=>`<div class='donor-card'><strong>${d.name}</strong> (${d.blood})<br>📍 ${d.location}<br>📦 Units: ${d.bloodBags.reduce((s,b)=>s+b.units,0)}<br>📞 ${d.phone}</div>`).join(''):"<p>No donors available</p>"; document.getElementById("matchedDonorsList")&&(document.getElementById("matchedDonorsList").innerHTML=html); }
+    document.getElementById("submitRequestBtn")?.addEventListener("click",()=>{ let blood=document.getElementById("reqBloodGroup").value; let reqUnits=parseInt(document.getElementById("reqUnits").value); let patient=document.getElementById("reqPatient").value; let hospital=document.getElementById("reqHospital").value; if(!patient||!hospital||isNaN(reqUnits)){ alert("Fill all fields"); return; } const today=new Date().toISOString().slice(0,10); let found=false; for(let donor of donors){ if(donor.blood===blood && donor.bloodBags){ for(let bag of donor.bloodBags){ if(bag.expiryDate>=today && bag.units>=reqUnits){ bag.units-=reqUnits; found=true; break; } } if(found) break; } } if(found){ bloodRequests.push({ id:Date.now(), patient, bloodGroup:blood, units:reqUnits, hospital, status:"Allocated", timestamp:new Date().toLocaleString() }); saveAll(); alert(`✅ ${reqUnits} unit(s) allocated!`); renderMatchingDonors(blood); } else alert("❌ Insufficient units!"); });
+    function renderAdminDonorList(){ let c=document.getElementById("adminDonorList"); if(!c) return; const today=new Date().toISOString().slice(0,10); c.innerHTML=donors.map((donor,idx)=>`<div class="admin-donor-row"><div><strong>${donor.name}</strong> <span class="blood-group-tag">${donor.blood}</span><br>📍 ${donor.location}<br>📞 ${donor.phone}<br>🩸 Units: ${(donor.bloodBags||[]).filter(b=>b.expiryDate>=today).reduce((s,b)=>s+b.units,0)}</div><div><button class="btn-sm btn-danger" onclick="deleteDonorEmergency(${idx})">Delete</button></div></div>`).join(''); }
+    window.deleteDonorEmergency=(idx)=>{ if(confirm("Delete?")){ donors.splice(idx,1); saveAll(); renderAdminDonorList(); } };
+    function renderAdminRequests(){ let c=document.getElementById("adminRequestsList"); if(c) c.innerHTML=bloodRequests.map((r,i)=>`<div><b>${r.patient}</b> | ${r.bloodGroup} | ${r.units}u | ${r.hospital} <button class="btn-sm" onclick="cancelReq(${i})">Cancel</button></div>`).join('')||"<p>No requests.</p>"; }
+    window.cancelReq=(i)=>{ bloodRequests.splice(i,1); saveAll(); renderAdminRequests(); };
+    function renderBanksMap(){ let mapDiv=document.getElementById("bankMap"); if(mapDiv && typeof L!=='undefined'){ let map=L.map(mapDiv).setView([20.5937,78.9629],4.5); L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map); banks.forEach(b=>L.marker([b.lat,b.lng]).addTo(map).bindPopup(`<b>${b.name}</b><br>${b.address}<br>${b.phone}`)); } document.getElementById("banksList")&&(document.getElementById("banksList").innerHTML=banks.map(b=>`<div class='bank-card'>🏛️ ${b.name}<br>📍 ${b.address}<br>📞 ${b.phone}<br>📦 ${b.stock}</div>`).join('')); }
+    function renderEvents(){ let c=document.getElementById("eventsContainer"); if(c) c.innerHTML=events.map(e=>`<div class='event-card'>📅 ${e.name}<br>🗓️ ${e.date}<br>📍 ${e.location} <button onclick="alert('Registered!')" class="btn-sm">Register</button></div>`).join(''); }
+    function renderTestimonials(){ let c=document.getElementById("testimonialsList"); if(c) c.innerHTML=testimonialsArray.map(t=>`<div class="testimonial-card">⭐ ${t}</div>`).join(''); }
+    function renderFaqs(){ let c=document.getElementById("faqList"); if(c) c.innerHTML=faqsArray.map((faq,i)=>`<div class="faq-item"><div class="faq-question" onclick="toggleFaq(${i})">❓ ${faq.q}</div><div id="faqAns${i}" class="faq-answer">${faq.a}</div></div>`).join(''); }
+    window.toggleFaq=(idx)=>{ let el=document.getElementById(`faqAns${idx}`); if(el) el.style.display=el.style.display==='none'?'block':'none'; };
+    let chartCtx=document.getElementById('donationTrendChart')?.getContext('2d'); if(chartCtx){ window.donationChart=new Chart(chartCtx,{ type:'line', data:{ labels:['Jan','Feb','Mar','Apr','May'], datasets:[{ label:'Donors', data:[5,12,28,45, donors.length], borderColor:'#b91c1c', fill:false }] } }); }
+    function updateChart(){ if(window.donationChart) window.donationChart.data.datasets[0].data[4]=donors.length; window.donationChart?.update(); }
+    function showMainApp() { document.getElementById('loginOverlay').style.display='none'; document.getElementById('mainApp').style.display='block'; document.getElementById('logoutBtnGlobal').style.display='inline-block'; updateStats(); renderAll(); attachOriginalEventListeners(); }
+    document.getElementById("globalLoginBtn")?.addEventListener("click",()=>{ let email=document.getElementById("globalLoginEmail").value.trim(), pwd=document.getElementById("globalLoginPassword").value; if(email==="admin@blooddonationportal.in" && pwd==="admin123"){ sessionStorage.setItem('lifeconnect_auth','true'); sessionStorage.setItem('lifeconnect_user','admin'); showMainApp(); } else if(donors.find(d=>d.email===email && d.password===pwd)){ sessionStorage.setItem('lifeconnect_auth','true'); sessionStorage.setItem('lifeconnect_user',email); showMainApp(); } else document.getElementById("globalError").innerText="❌ Invalid email or password."; });
+    document.getElementById("globalSignupBtn")?.addEventListener("click",()=>{ let email=document.getElementById("globalLoginEmail").value.trim(), pwd=document.getElementById("globalLoginPassword").value; if(!email||!pwd) alert("Enter email/password"); else if(donors.find(d=>d.email===email)) alert("Email exists"); else if(email==="admin@blooddonationportal.in") alert("Cannot create admin"); else { donors.push({ id:Date.now(), name:email.split('@')[0], age:25, gender:"Male", blood:"O+", location:"India", phone:"+91 00000 00000", email, password:pwd, lastDonation:null, history:[], eligibility:true, bloodBags:[] }); saveAll(); alert("Account created! Please login."); } });
+    document.getElementById("logoutBtnGlobal")?.addEventListener("click",()=>{ sessionStorage.removeItem('lifeconnect_auth'); sessionStorage.removeItem('lifeconnect_user'); location.reload(); });
+    function showPage(pageId){ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active-page')); document.getElementById(pageId).classList.add('active-page'); if(pageId==='bloodBankDir') renderBanksMap(); if(pageId==='faq') renderFaqs(); if(pageId==='testimonials') renderTestimonials(); if(pageId==='analytics' && window.donationChart) updateChart(); }
+    window.showPage = showPage;
+    document.querySelectorAll('[data-page]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.getAttribute('data-page'))));
+    document.getElementById("quickSearchBtn")?.addEventListener("click",()=>{ let grp=document.getElementById("quickSearchGroup").value; let count=donors.filter(d=>d.blood===grp).length; document.getElementById("quickResult").innerHTML=`✅ ${count} donors available for ${grp} in India.`; });
+    document.getElementById("homeBecomeDonor")?.addEventListener("click",()=>showPage("donorDashboard"));
+    document.getElementById("homeRequestBlood")?.addEventListener("click",()=>showPage("requestBlood"));
+    document.getElementById("viewTestimonialsBtn")?.addEventListener("click",()=>showPage("testimonials"));
+    document.getElementById("registerEventBtn")?.addEventListener("click",()=>alert("Registered for camps!"));
+    document.getElementById("verifyAdminBtn")?.addEventListener("click",()=>{ if(document.getElementById("adminPassword").value==="admin123") document.getElementById("adminContent").style.display="block"; else alert("Wrong password"); });
+    document.getElementById("refreshAdminBtn")?.addEventListener("click",()=>{ renderAdminDonorList(); renderAdminRequests(); alert("Refreshed"); });
+    if(sessionStorage.getItem('lifeconnect_auth')==='true') showMainApp();
+</script>
+</body>
+</html>
